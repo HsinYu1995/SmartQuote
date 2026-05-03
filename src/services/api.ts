@@ -2,57 +2,76 @@ import type {
   Quote,
   InsuranceType,
   Client,
+  ClientSummary,
+  Broker,
   CarInsuranceCondition,
   HouseInsuranceCondition,
   HealthInsuranceCondition,
   PaginatedResponse,
   QuoteFilters,
 } from '../types'
-import { mockQuotes, generateRef } from './mockData'
-import { calculateCarQuote, calculateHouseQuote, calculateHealthQuote } from './quoteEngine'
 
-const SIMULATED_DELAY = 600
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? '/api'
 
-const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
+function toQueryString(filters: QuoteFilters = {}) {
+  const params = new URLSearchParams()
 
-let quotesStore: Quote[] = [...mockQuotes]
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') params.set(key, String(value))
+  })
+
+  return params.toString()
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...init?.headers },
+    ...init,
+  })
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: 'Request failed' }))
+    throw new Error(error.message ?? `Request failed with ${res.status}`)
+  }
+
+  return res.json() as Promise<T>
+}
+
+export const authApi = {
+  async login(email: string, password: string): Promise<Broker> {
+    return request<Broker>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    })
+  },
+
+  async register(data: {
+    name: string
+    email: string
+    password: string
+    licenseNumber: string
+    agency: string
+  }): Promise<Broker> {
+    return request<Broker>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  async logout(): Promise<void> {
+    await request('/auth/logout', { method: 'POST' })
+  },
+}
 
 export const quoteApi = {
   async getQuotes(filters: QuoteFilters = {}): Promise<PaginatedResponse<Quote>> {
-    await delay(SIMULATED_DELAY)
-
-    let results = [...quotesStore]
-
-    if (filters.type) results = results.filter((q) => q.type === filters.type)
-    if (filters.status) results = results.filter((q) => q.status === filters.status)
-    if (filters.search) {
-      const s = filters.search.toLowerCase()
-      results = results.filter(
-        (q) =>
-          q.referenceNumber.toLowerCase().includes(s) ||
-          `${q.client.firstName} ${q.client.lastName}`.toLowerCase().includes(s) ||
-          q.client.email.toLowerCase().includes(s),
-      )
-    }
-    if (filters.dateFrom) results = results.filter((q) => q.createdAt >= filters.dateFrom!)
-    if (filters.dateTo) results = results.filter((q) => q.createdAt <= filters.dateTo!)
-
-    results.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-
-    const page = filters.page ?? 1
-    const pageSize = filters.pageSize ?? 10
-    const total = results.length
-    const totalPages = Math.ceil(total / pageSize)
-    const data = results.slice((page - 1) * pageSize, page * pageSize)
-
-    return { data, total, page, pageSize, totalPages }
+    const qs = toQueryString(filters)
+    return request<PaginatedResponse<Quote>>(`/quotes${qs ? `?${qs}` : ''}`)
   },
 
   async getQuote(id: string): Promise<Quote> {
-    await delay(300)
-    const quote = quotesStore.find((q) => q.id === id)
-    if (!quote) throw new Error(`Quote ${id} not found`)
-    return quote
+    return request<Quote>(`/quotes/${id}`)
   },
 
   async createQuote(
@@ -61,34 +80,10 @@ export const quoteApi = {
     condition: CarInsuranceCondition | HouseInsuranceCondition | HealthInsuranceCondition,
     brokerId: string,
   ): Promise<Quote> {
-    await delay(SIMULATED_DELAY * 2)
-
-    let result
-    if (type === 'car') result = calculateCarQuote(condition as CarInsuranceCondition)
-    else if (type === 'house') result = calculateHouseQuote(condition as HouseInsuranceCondition)
-    else result = calculateHealthQuote(condition as HealthInsuranceCondition)
-
-    // Simulate occasional rejection based on risk profile
-    const isHighRisk =
-      (type === 'car' && (condition as CarInsuranceCondition).priorAccidents >= 3) ||
-      (type === 'health' && (condition as HealthInsuranceCondition).smokingStatus === 'current' &&
-        (condition as HealthInsuranceCondition).preExistingConditions.length > 2)
-
-    const quote: Quote = {
-      id: `q-${Date.now()}`,
-      referenceNumber: generateRef(),
-      type,
-      status: isHighRisk ? 'rejected' : 'approved',
-      client,
-      condition,
-      result: isHighRisk ? undefined : result,
-      brokerId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-
-    quotesStore = [quote, ...quotesStore]
-    return quote
+    return request<Quote>('/quotes', {
+      method: 'POST',
+      body: JSON.stringify({ type, client, condition, brokerId }),
+    })
   },
 
   async getStats(): Promise<{
@@ -97,15 +92,11 @@ export const quoteApi = {
     rejectedToday: number
     pendingTotal: number
   }> {
-    await delay(300)
-    const today = new Date().toISOString().split('T')[0]
-    const todayQuotes = quotesStore.filter((q) => q.createdAt.startsWith(today))
+    return request('/stats')
+  },
 
-    return {
-      totalToday: todayQuotes.length,
-      approvedToday: todayQuotes.filter((q) => q.status === 'approved').length,
-      rejectedToday: todayQuotes.filter((q) => q.status === 'rejected').length,
-      pendingTotal: quotesStore.filter((q) => q.status === 'pending').length,
-    }
+  async getClients(search = ''): Promise<{ data: ClientSummary[] }> {
+    const qs = search ? `?search=${encodeURIComponent(search)}` : ''
+    return request<{ data: ClientSummary[] }>(`/clients${qs}`)
   },
 }

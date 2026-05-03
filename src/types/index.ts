@@ -11,6 +11,7 @@ export interface Broker {
 }
 
 export interface Client {
+  id?: string
   firstName: string
   lastName: string
   dateOfBirth: string
@@ -20,6 +21,12 @@ export interface Client {
   city: string
   state: string
   zipCode: string
+}
+
+export interface ClientSummary extends Client {
+  id: string
+  quoteCount: number
+  latestQuoteAt?: string | null
 }
 
 // ─── Car Insurance ───────────────────────────────────────────────────────────
@@ -127,6 +134,7 @@ export interface ApiError {
 }
 
 export interface QuoteFilters {
+  clientId?: string
   type?: InsuranceType
   status?: QuoteStatus
   search?: string

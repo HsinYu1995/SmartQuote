@@ -47,3 +47,11 @@ export function useStats() {
     staleTime: 30_000,
   })
 }
+
+export function useClients(search = '') {
+  return useQuery({
+    queryKey: ['clients', search],
+    queryFn: () => quoteApi.getClients(search),
+    staleTime: 30_000,
+  })
+}

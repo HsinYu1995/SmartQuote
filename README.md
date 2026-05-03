@@ -101,6 +101,24 @@ npm run test:report
 
 Opens the latest Playwright HTML report.
 
+```bash
+npm run db:start
+```
+
+Starts the local PostgreSQL container.
+
+```bash
+npm run db:stop
+```
+
+Stops the local PostgreSQL container.
+
+```bash
+npm run db:reset
+```
+
+Removes the local PostgreSQL volume and starts a fresh database.
+
 ## Testing Notes
 
 The tests in `tests/` are Playwright end-to-end tests. They start the real Vite dev server and drive the app in Chromium and Firefox.
@@ -154,3 +172,67 @@ Protected app routes are wrapped by `ProtectedRoute`, which redirects unauthenti
 This is currently a frontend-only demo app. Quote data comes from `src/services/mockData.ts`, and new quotes are stored in an in-memory array inside `src/services/api.ts` while the app session is running.
 
 Premium calculations live in `src/services/quoteEngine.ts`.
+
+## Database Recommendation
+
+For a production version, PostgreSQL is the recommended primary database. SmartQuote data is structured and relational: brokers create quotes for clients, each quote has a status, type, condition details, calculated result, and timestamps.
+
+This application is expected to be more read-heavy than write-heavy. Brokers will frequently review dashboards, search quote history, filter by status or type, and open quote details. Writes happen when quotes are created or updated, but read performance and reliable filtering are more important early priorities.
+
+Recommended starting tables:
+
+- `brokers`
+- `clients`
+- `quotes`
+- `quote_results`
+- `car_quote_conditions`
+- `house_quote_conditions`
+- `health_quote_conditions`
+
+Recommended indexes:
+
+- `quotes.broker_id`
+- `quotes.status`
+- `quotes.type`
+- `quotes.created_at`
+- `quotes.reference_number`
+- `clients.email`
+- client name fields used for search
+
+For an MVP, quote condition fields can also be stored as `jsonb` on the `quotes` table instead of immediately splitting each insurance type into separate condition tables. That keeps the schema flexible while the product is still changing.
+
+## Local PostgreSQL
+
+This repo includes a Docker Compose setup for a real local PostgreSQL database.
+
+Create a local environment file:
+
+```bash
+cp .env.example .env
+```
+
+Start PostgreSQL:
+
+```bash
+npm run db:start
+```
+
+The database will be available at:
+
+```text
+postgresql://smartquote:smartquote_dev_password@localhost:5432/smartquote
+```
+
+The schema is initialized from `db/init/001_schema.sql` the first time the database volume is created.
+
+Stop PostgreSQL:
+
+```bash
+npm run db:stop
+```
+
+Remove the local database volume and start fresh:
+
+```bash
+npm run db:reset
+```

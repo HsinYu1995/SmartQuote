@@ -1,15 +1,24 @@
-import type {
-  CarInsuranceCondition,
-  HouseInsuranceCondition,
-  HealthInsuranceCondition,
-  QuoteResult,
-} from '../types'
-
-function roundTo2(n: number) {
+function roundTo2(n) {
   return Math.round(n * 100) / 100
 }
 
-export function calculateCarQuote(condition: CarInsuranceCondition): QuoteResult {
+function dateOnly(date) {
+  return date.toISOString().split('T')[0]
+}
+
+function coverageDates() {
+  const effectiveDate = new Date()
+  effectiveDate.setDate(effectiveDate.getDate() + 1)
+  const expiryDate = new Date(effectiveDate)
+  expiryDate.setFullYear(expiryDate.getFullYear() + 1)
+
+  return {
+    effectiveDate: dateOnly(effectiveDate),
+    expiryDate: dateOnly(expiryDate),
+  }
+}
+
+export function calculateCarQuote(condition) {
   const base = 800
   const coverageMultiplier = { basic: 0.7, standard: 1.0, comprehensive: 1.4 }[condition.coverageLevel]
   const usageMultiplier = { personal: 1.0, business: 1.3, rideshare: 1.5 }[condition.usage]
@@ -22,30 +31,22 @@ export function calculateCarQuote(condition: CarInsuranceCondition): QuoteResult
     base * coverageMultiplier * usageMultiplier * accidentSurcharge * experienceDiscount * ageMultiplier * mileageMultiplier,
   )
 
-  const breakdown: Record<string, number> = {
-    liability: roundTo2(annual * 0.4),
-    collision: roundTo2(annual * 0.3),
-    comprehensive: roundTo2(annual * 0.2),
-    medical: roundTo2(annual * 0.1),
-  }
-
-  const effectiveDate = new Date()
-  effectiveDate.setDate(effectiveDate.getDate() + 1)
-  const expiryDate = new Date(effectiveDate)
-  expiryDate.setFullYear(expiryDate.getFullYear() + 1)
-
   return {
     monthlyPremium: roundTo2(annual / 12),
     annualPremium: annual,
     deductible: condition.coverageLevel === 'basic' ? 1000 : condition.coverageLevel === 'standard' ? 500 : 250,
     coverageLimit: condition.coverageLevel === 'basic' ? 50000 : condition.coverageLevel === 'standard' ? 100000 : 300000,
-    effectiveDate: effectiveDate.toISOString().split('T')[0],
-    expiryDate: expiryDate.toISOString().split('T')[0],
-    breakdown,
+    ...coverageDates(),
+    breakdown: {
+      liability: roundTo2(annual * 0.4),
+      collision: roundTo2(annual * 0.3),
+      comprehensive: roundTo2(annual * 0.2),
+      medical: roundTo2(annual * 0.1),
+    },
   }
 }
 
-export function calculateHouseQuote(condition: HouseInsuranceCondition): QuoteResult {
+export function calculateHouseQuote(condition) {
   const baseRate = 0.003
   const constructionMultiplier = { wood: 1.2, brick: 0.9, concrete: 0.85, mixed: 1.0 }[condition.constructionType]
   const roofMultiplier = { asphalt: 1.0, metal: 0.9, tile: 0.95, flat: 1.15 }[condition.roofType]
@@ -69,61 +70,83 @@ export function calculateHouseQuote(condition: HouseInsuranceCondition): QuoteRe
       ageMultiplier,
   )
 
-  const breakdown: Record<string, number> = {
-    dwelling: roundTo2(annual * 0.55),
-    otherStructures: roundTo2(annual * 0.1),
-    personalProperty: roundTo2(annual * 0.2),
-    liability: roundTo2(annual * 0.1),
-    additionalLiving: roundTo2(annual * 0.05),
-  }
-
-  const effectiveDate = new Date()
-  effectiveDate.setDate(effectiveDate.getDate() + 1)
-  const expiryDate = new Date(effectiveDate)
-  expiryDate.setFullYear(expiryDate.getFullYear() + 1)
-
   return {
     monthlyPremium: roundTo2(annual / 12),
     annualPremium: annual,
     deductible: 1000,
     coverageLimit: condition.desiredCoverage,
-    effectiveDate: effectiveDate.toISOString().split('T')[0],
-    expiryDate: expiryDate.toISOString().split('T')[0],
-    breakdown,
+    ...coverageDates(),
+    breakdown: {
+      dwelling: roundTo2(annual * 0.55),
+      otherStructures: roundTo2(annual * 0.1),
+      personalProperty: roundTo2(annual * 0.2),
+      liability: roundTo2(annual * 0.1),
+      additionalLiving: roundTo2(annual * 0.05),
+    },
   }
 }
 
-export function calculateHealthQuote(condition: HealthInsuranceCondition): QuoteResult {
+export function calculateHealthQuote(condition) {
   const planBase = { HMO: 280, PPO: 380, EPO: 320, HDHP: 220 }[condition.planType]
   const coverageMultiplier = { individual: 1.0, couple: 1.85, family: 2.4 }[condition.coverageType]
   const ageMultiplier = 1 + (condition.clientAge - 25) * 0.03
   const smokingMultiplier = { never: 1.0, former: 1.15, current: 1.5 }[condition.smokingStatus]
-  const bmiMultiplier = condition.bmi > 30 ? 1.1 : condition.bmi > 35 ? 1.25 : 1.0
+  const bmiMultiplier = condition.bmi > 35 ? 1.25 : condition.bmi > 30 ? 1.1 : 1.0
   const conditionSurcharge = 1 + condition.preExistingConditions.length * 0.08
   const prescriptionSurcharge = 1 + condition.prescriptionCount * 0.02
 
-  let monthly = planBase * coverageMultiplier * ageMultiplier * smokingMultiplier * bmiMultiplier * conditionSurcharge * prescriptionSurcharge
-  const breakdown: Record<string, number> = { medical: roundTo2(monthly) }
+  let monthly =
+    planBase *
+    coverageMultiplier *
+    ageMultiplier *
+    smokingMultiplier *
+    bmiMultiplier *
+    conditionSurcharge *
+    prescriptionSurcharge
 
-  if (condition.needsDental) { const d = roundTo2(40 * coverageMultiplier); monthly += d; breakdown.dental = d }
-  if (condition.needsVision) { const v = roundTo2(20 * coverageMultiplier); monthly += v; breakdown.vision = v }
-  if (condition.needsMental) { const m = roundTo2(35 * coverageMultiplier); monthly += m; breakdown.mental = m }
+  const breakdown = { medical: roundTo2(monthly) }
+
+  if (condition.needsDental) {
+    const dental = roundTo2(40 * coverageMultiplier)
+    monthly += dental
+    breakdown.dental = dental
+  }
+  if (condition.needsVision) {
+    const vision = roundTo2(20 * coverageMultiplier)
+    monthly += vision
+    breakdown.vision = vision
+  }
+  if (condition.needsMental) {
+    const mental = roundTo2(35 * coverageMultiplier)
+    monthly += mental
+    breakdown.mental = mental
+  }
 
   monthly = roundTo2(monthly)
-  const annual = roundTo2(monthly * 12)
-
-  const effectiveDate = new Date()
-  effectiveDate.setDate(effectiveDate.getDate() + 1)
-  const expiryDate = new Date(effectiveDate)
-  expiryDate.setFullYear(expiryDate.getFullYear() + 1)
 
   return {
     monthlyPremium: monthly,
-    annualPremium: annual,
+    annualPremium: roundTo2(monthly * 12),
     deductible: condition.desiredDeductible,
     coverageLimit: 5000000,
-    effectiveDate: effectiveDate.toISOString().split('T')[0],
-    expiryDate: expiryDate.toISOString().split('T')[0],
+    ...coverageDates(),
     breakdown,
   }
+}
+
+export function calculateQuote(type, condition) {
+  if (type === 'car') return calculateCarQuote(condition)
+  if (type === 'house') return calculateHouseQuote(condition)
+  if (type === 'health') return calculateHealthQuote(condition)
+  throw new Error(`Unsupported quote type: ${type}`)
+}
+
+export function isHighRisk(type, condition) {
+  return (
+    (type === 'car' && condition.priorAccidents >= 3) ||
+    (type === 'health' &&
+      condition.smokingStatus === 'current' &&
+      Array.isArray(condition.preExistingConditions) &&
+      condition.preExistingConditions.length > 2)
+  )
 }

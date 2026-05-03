@@ -7,6 +7,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { NewQuotePage } from './pages/NewQuotePage'
 import { QuoteHistoryPage } from './pages/QuoteHistoryPage'
 import { QuoteDetailPage } from './pages/QuoteDetailPage'
+import { ClientsPage } from './pages/ClientsPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,6 +31,7 @@ export default function App() {
               <Route path="/quotes/new" element={<NewQuotePage />} />
               <Route path="/quotes" element={<QuoteHistoryPage />} />
               <Route path="/quotes/:id" element={<QuoteDetailPage />} />
+              <Route path="/clients" element={<ClientsPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,28 +1,10 @@
-import type { Quote, Broker } from '../types'
-
-export const mockBroker: Broker = {
-  id: 'broker-001',
-  name: 'Alex Johnson',
-  email: 'alex.johnson@smartquote.com',
-  licenseNumber: 'LIC-2024-00123',
-  agency: 'SmartQuote Insurance Group',
-}
-
-let quoteCounter = 1000
-
-function generateRef(): string {
-  return `SQ-${new Date().getFullYear()}-${String(++quoteCounter).padStart(6, '0')}`
-}
-
-export const mockQuotes: Quote[] = [
+export const demoQuotes = [
   {
-    id: 'q-001',
     referenceNumber: 'SQ-2024-001001',
     type: 'car',
     status: 'approved',
-    brokerId: 'broker-001',
     createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    updatedAt: new Date(Date.now() - 86400000 * 1).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000).toISOString(),
     client: {
       firstName: 'Maria',
       lastName: 'Garcia',
@@ -45,22 +27,11 @@ export const mockQuotes: Quote[] = [
       driverLicenseYears: 15,
       priorAccidents: 0,
     },
-    result: {
-      monthlyPremium: 142,
-      annualPremium: 1704,
-      deductible: 500,
-      coverageLimit: 100000,
-      effectiveDate: '2024-02-01',
-      expiryDate: '2025-02-01',
-      breakdown: { liability: 60, collision: 45, comprehensive: 25, medical: 12 },
-    },
   },
   {
-    id: 'q-002',
     referenceNumber: 'SQ-2024-001002',
     type: 'house',
     status: 'pending',
-    brokerId: 'broker-001',
     createdAt: new Date(Date.now() - 3600000).toISOString(),
     updatedAt: new Date(Date.now() - 3600000).toISOString(),
     client: {
@@ -93,11 +64,9 @@ export const mockQuotes: Quote[] = [
     },
   },
   {
-    id: 'q-003',
     referenceNumber: 'SQ-2024-001003',
     type: 'health',
     status: 'approved',
-    brokerId: 'broker-001',
     createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
     updatedAt: new Date(Date.now() - 86400000 * 4).toISOString(),
     client: {
@@ -124,22 +93,11 @@ export const mockQuotes: Quote[] = [
       needsMental: false,
       prescriptionCount: 1,
     },
-    result: {
-      monthlyPremium: 387,
-      annualPremium: 4644,
-      deductible: 1500,
-      coverageLimit: 5000000,
-      effectiveDate: '2024-01-01',
-      expiryDate: '2025-01-01',
-      breakdown: { medical: 320, dental: 45, vision: 22 },
-    },
   },
   {
-    id: 'q-004',
     referenceNumber: 'SQ-2024-001004',
     type: 'car',
     status: 'rejected',
-    brokerId: 'broker-001',
     createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
     updatedAt: new Date(Date.now() - 86400000 * 6).toISOString(),
     client: {
@@ -166,5 +124,3 @@ export const mockQuotes: Quote[] = [
     },
   },
 ]
-
-export { generateRef }

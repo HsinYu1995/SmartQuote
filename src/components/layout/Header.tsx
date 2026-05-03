@@ -5,8 +5,8 @@ export function Header() {
   const { broker, logout } = useAuthStore()
   const navigate = useNavigate()
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     navigate('/login')
   }
 
@@ -30,6 +30,9 @@ export function Header() {
             </Link>
             <Link to="/quotes" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
               Quote History
+            </Link>
+            <Link to="/clients" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
+              Clients
             </Link>
           </nav>
 

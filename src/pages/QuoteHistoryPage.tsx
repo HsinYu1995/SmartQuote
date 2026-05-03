@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useQuotes } from '../hooks/useQuotes'
 import { Card } from '../components/ui/Card'
 import { StatusBadge, TypeBadge } from '../components/ui/Badge'
@@ -10,7 +10,9 @@ import type { InsuranceType, QuoteStatus, QuoteFilters } from '../types'
 import { format } from 'date-fns'
 
 export function QuoteHistoryPage() {
-  const [filters, setFilters] = useState<QuoteFilters>({ page: 1, pageSize: 10 })
+  const [searchParams] = useSearchParams()
+  const clientId = searchParams.get('clientId') ?? undefined
+  const [filters, setFilters] = useState<QuoteFilters>({ clientId, page: 1, pageSize: 10 })
   const { data, isLoading } = useQuotes(filters)
 
   const setFilter = (key: keyof QuoteFilters, value: string | number | undefined) => {
@@ -59,7 +61,7 @@ export function QuoteHistoryPage() {
           />
           <Button
             variant="secondary"
-            onClick={() => setFilters({ page: 1, pageSize: 10 })}
+            onClick={() => setFilters({ clientId, page: 1, pageSize: 10 })}
             data-testid="clear-filters"
           >
             Clear Filters
