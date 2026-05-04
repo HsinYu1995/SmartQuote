@@ -9,6 +9,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>
   register: (data: { name: string; email: string; password: string; licenseNumber: string; agency: string }) => Promise<void>
   logout: () => Promise<void>
+  checkSession: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -30,6 +31,15 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         try { await authApi.logout() } catch { /* ignore network errors on logout */ }
         set({ broker: null, isAuthenticated: false })
+      },
+
+      checkSession: async () => {
+        try {
+          const broker = await authApi.me()
+          set({ broker, isAuthenticated: true })
+        } catch {
+          set({ broker: null, isAuthenticated: false })
+        }
       },
     }),
     { name: 'smartquote-auth' },

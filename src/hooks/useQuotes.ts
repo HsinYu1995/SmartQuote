@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { quoteApi } from '../services/api'
+import { useDebounce } from './useDebounce'
 import type { InsuranceType, Client, CarInsuranceCondition, HouseInsuranceCondition, HealthInsuranceCondition, QuoteFilters } from '../types'
 
 export function useQuotes(filters: QuoteFilters = {}) {
@@ -49,9 +50,10 @@ export function useStats() {
 }
 
 export function useClients(search = '') {
+  const debouncedSearch = useDebounce(search, 300)
   return useQuery({
-    queryKey: ['clients', search],
-    queryFn: () => quoteApi.getClients(search),
+    queryKey: ['clients', debouncedSearch],
+    queryFn: () => quoteApi.getClients(debouncedSearch),
     staleTime: 30_000,
   })
 }

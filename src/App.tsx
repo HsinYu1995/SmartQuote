@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Layout } from './components/layout/Layout'
@@ -8,6 +9,7 @@ import { NewQuotePage } from './pages/NewQuotePage'
 import { QuoteHistoryPage } from './pages/QuoteHistoryPage'
 import { QuoteDetailPage } from './pages/QuoteDetailPage'
 import { ClientsPage } from './pages/ClientsPage'
+import { useAuthStore } from './store/authStore'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,6 +22,12 @@ const queryClient = new QueryClient({
 })
 
 export default function App() {
+  const { isAuthenticated, checkSession } = useAuthStore()
+
+  useEffect(() => {
+    if (isAuthenticated) checkSession()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>

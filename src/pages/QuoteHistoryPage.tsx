@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuotes } from '../hooks/useQuotes'
+import { useDebounce } from '../hooks/useDebounce'
 import { Card } from '../components/ui/Card'
 import { StatusBadge, TypeBadge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
@@ -12,10 +13,12 @@ import { format } from 'date-fns'
 export function QuoteHistoryPage() {
   const [searchParams] = useSearchParams()
   const clientId = searchParams.get('clientId') ?? undefined
-  const [filters, setFilters] = useState<QuoteFilters>({ clientId, page: 1, pageSize: 10 })
-  const { data, isLoading } = useQuotes(filters)
+  const [rawSearch, setRawSearch] = useState('')
+  const debouncedSearch = useDebounce(rawSearch, 300)
+  const [filters, setFilters] = useState<Omit<QuoteFilters, 'search'>>({ clientId, page: 1, pageSize: 10 })
+  const { data, isLoading } = useQuotes({ ...filters, search: debouncedSearch || undefined })
 
-  const setFilter = (key: keyof QuoteFilters, value: string | number | undefined) => {
+  const setFilter = (key: keyof Omit<QuoteFilters, 'search'>, value: string | number | undefined) => {
     setFilters((prev) => ({ ...prev, [key]: value || undefined, page: 1 }))
   }
 
@@ -32,8 +35,8 @@ export function QuoteHistoryPage() {
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3" data-testid="filters">
           <Input
             placeholder="Search by name, ref, email..."
-            value={filters.search ?? ''}
-            onChange={(e) => setFilter('search', e.target.value)}
+            value={rawSearch}
+            onChange={(e) => setRawSearch(e.target.value)}
             data-testid="search-input"
           />
           <Select
@@ -61,7 +64,7 @@ export function QuoteHistoryPage() {
           />
           <Button
             variant="secondary"
-            onClick={() => setFilters({ clientId, page: 1, pageSize: 10 })}
+            onClick={() => { setFilters({ clientId, page: 1, pageSize: 10 }); setRawSearch('') }}
             data-testid="clear-filters"
           >
             Clear Filters

@@ -17,6 +17,18 @@ const pool = new Pool({
 })
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'dev-secret-change-in-production'
+
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'dev-secret-change-in-production') {
+    console.error('FATAL: JWT_SECRET must be set to a strong secret in production')
+    process.exit(1)
+  }
+  if (!process.env.DATABASE_URL) {
+    console.error('FATAL: DATABASE_URL must be set in production')
+    process.exit(1)
+  }
+}
+
 const COOKIE_MAX_AGE = 8 * 60 * 60 * 1000 // 8 hours
 
 const app = express()
@@ -194,6 +206,8 @@ async function insertQuoteWithResult(db, { type, status, client, condition, brok
 }
 
 async function nextReferenceNumber(db) {
+  // Transaction-scoped advisory lock serializes concurrent calls — no unique constraint retries needed
+  await db.query('select pg_advisory_xact_lock(42)')
   const year = new Date().getFullYear()
   const prefix = `SQ-${year}-`
   const result = await db.query(
@@ -209,7 +223,7 @@ async function nextReferenceNumber(db) {
   return `${prefix}${String(next).padStart(6, '0')}`
 }
 
-async function findQuoteById(id) {
+async function findQuoteById(id, brokerId) {
   const result = await pool.query(
     `select
       q.id, q.reference_number, q.broker_id, q.type, q.status, q.condition,
@@ -221,8 +235,8 @@ async function findQuoteById(id) {
      from quotes q
      join clients c on c.id = q.client_id
      left join quote_results qr on qr.quote_id = q.id
-     where q.id = $1`,
-    [id],
+     where q.id = $1 and q.broker_id = $2`,
+    [id, brokerId],
   )
 
   return result.rows[0] ? mapQuote(result.rows[0]) : null
@@ -330,6 +344,19 @@ app.post('/api/auth/logout', (_req, res) => {
   res.json({ ok: true })
 })
 
+app.get('/api/auth/me', requireAuth, async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      'select id, name, email, license_number, agency from brokers where id = $1',
+      [req.brokerId],
+    )
+    if (!result.rows[0]) return res.status(404).json({ message: 'Broker not found' })
+    res.json(mapBroker(result.rows[0]))
+  } catch (error) {
+    next(error)
+  }
+})
+
 app.get('/api/health', async (_req, res, next) => {
   try {
     await pool.query('select 1')
@@ -339,7 +366,7 @@ app.get('/api/health', async (_req, res, next) => {
   }
 })
 
-app.get('/api/stats', async (_req, res, next) => {
+app.get('/api/stats', async (req, res, next) => {
   try {
     const result = await pool.query(
       `select
@@ -347,7 +374,9 @@ app.get('/api/stats', async (_req, res, next) => {
         count(*) filter (where created_at::date = current_date and status = 'approved')::int as approved_today,
         count(*) filter (where created_at::date = current_date and status = 'rejected')::int as rejected_today,
         count(*) filter (where status = 'pending')::int as pending_total
-       from quotes`,
+       from quotes
+       where broker_id = $1`,
+      [req.brokerId],
     )
 
     res.json({
@@ -364,13 +393,13 @@ app.get('/api/stats', async (_req, res, next) => {
 app.get('/api/clients', async (req, res, next) => {
   try {
     const search = String(req.query.search ?? '').trim()
-    const params = []
+    const params = [req.brokerId]
     const where = []
 
     if (search) {
-      params.push(`%${search.toLowerCase()}%`)
+      params.push(`%${search}%`)
       where.push(
-        `(lower(c.first_name || ' ' || c.last_name) like $${params.length} or lower(c.email) like $${params.length})`,
+        `((c.first_name || ' ' || c.last_name) ilike $${params.length} or c.email ilike $${params.length})`,
       )
     }
 
@@ -381,7 +410,7 @@ app.get('/api/clients', async (req, res, next) => {
         count(q.id)::int as quote_count,
         max(q.created_at)::text as latest_quote_at
        from clients c
-       left join quotes q on q.client_id = c.id
+       join quotes q on q.client_id = c.id and q.broker_id = $1
        ${where.length ? `where ${where.join(' and ')}` : ''}
        group by c.id
        order by latest_quote_at desc nulls last, c.last_name, c.first_name`,
@@ -415,8 +444,8 @@ async function listQuotes(req, res, next) {
   try {
     const page = Math.max(1, Number(req.query.page ?? 1))
     const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize ?? 10)))
-    const params = []
-    const where = []
+    const params = [req.brokerId]
+    const where = ['q.broker_id = $1']
 
     if (req.query.type) {
       params.push(req.query.type)
@@ -439,11 +468,11 @@ async function listQuotes(req, res, next) {
       where.push(`q.created_at <= $${params.length}`)
     }
     if (req.query.search) {
-      params.push(`%${String(req.query.search).toLowerCase()}%`)
+      params.push(`%${String(req.query.search)}%`)
       where.push(
-        `(lower(q.reference_number) like $${params.length}
-          or lower(c.first_name || ' ' || c.last_name) like $${params.length}
-          or lower(c.email) like $${params.length})`,
+        `(q.reference_number ilike $${params.length}
+          or (c.first_name || ' ' || c.last_name) ilike $${params.length}
+          or c.email ilike $${params.length})`,
       )
     }
 
@@ -489,7 +518,7 @@ async function listQuotes(req, res, next) {
 
 app.get('/api/quotes/:id', async (req, res, next) => {
   try {
-    const quote = await findQuoteById(req.params.id)
+    const quote = await findQuoteById(req.params.id, req.brokerId)
     if (!quote) return res.status(404).json({ message: 'Quote not found', code: 'QUOTE_NOT_FOUND' })
     res.json(quote)
   } catch (error) {
@@ -507,11 +536,10 @@ app.post('/api/quotes', async (req, res, next) => {
     const status = isHighRisk(type, condition) ? 'rejected' : 'approved'
 
     await db.query('begin')
-    const brokerId = await getDefaultBrokerId(db)
-    const id = await insertQuoteWithResult(db, { type, status, client, condition, brokerId })
+    const id = await insertQuoteWithResult(db, { type, status, client, condition, brokerId: req.brokerId })
     await db.query('commit')
 
-    const quote = await findQuoteById(id)
+    const quote = await findQuoteById(id, req.brokerId)
     res.status(201).json(quote)
   } catch (error) {
     await db.query('rollback')

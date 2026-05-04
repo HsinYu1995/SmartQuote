@@ -39,6 +39,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const authApi = {
+  async me(): Promise<Broker> {
+    return request<Broker>('/auth/me')
+  },
+
   async login(email: string, password: string): Promise<Broker> {
     return request<Broker>('/auth/login', {
       method: 'POST',
