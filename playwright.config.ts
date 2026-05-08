@@ -21,10 +21,18 @@ export default defineConfig({
       use: { baseURL: 'http://localhost:3001' },
     },
   ],
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: 'npm run dev:server',
+      url: 'http://localhost:3001/api/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+    {
+      command: 'npm run dev',
+      url: 'http://localhost:5173',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+  ],
 })
