@@ -26,8 +26,8 @@ test.describe('Authentication', () => {
 
   test('redirects to dashboard after successful login', async ({ page }) => {
     await page.goto('/login')
-    await page.getByTestId('email-input').fill('broker@demo.com')
-    await page.getByTestId('password-input').fill('password123')
+    await page.getByTestId('email-input').fill('alex.johnson@smartquote.com')
+    await page.getByTestId('password-input').fill('demo1234')
     await page.getByTestId('login-submit').click()
     await page.waitForURL('/')
     await expect(page.getByTestId('dashboard')).toBeVisible()
@@ -35,8 +35,8 @@ test.describe('Authentication', () => {
 
   test('shows broker name in header after login', async ({ page }) => {
     await page.goto('/login')
-    await page.getByTestId('email-input').fill('broker@demo.com')
-    await page.getByTestId('password-input').fill('password123')
+    await page.getByTestId('email-input').fill('alex.johnson@smartquote.com')
+    await page.getByTestId('password-input').fill('demo1234')
     await page.getByTestId('login-submit').click()
     await page.waitForURL('/')
     await expect(page.getByTestId('header')).toContainText('SmartQuote')
@@ -44,8 +44,8 @@ test.describe('Authentication', () => {
 
   test('logout clears session and redirects to login', async ({ page }) => {
     await page.goto('/login')
-    await page.getByTestId('email-input').fill('broker@demo.com')
-    await page.getByTestId('password-input').fill('any')
+    await page.getByTestId('email-input').fill('alex.johnson@smartquote.com')
+    await page.getByTestId('password-input').fill('demo1234')
     await page.getByTestId('login-submit').click()
     await page.waitForURL('/')
     await page.getByTestId('logout-button').click()
