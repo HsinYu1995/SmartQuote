@@ -1,9 +1,6 @@
 import { test, expect } from '@playwright/test'
-import { login } from './helpers'
-
 test.describe('Quote History', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page)
     await page.goto('/quotes')
   })
 

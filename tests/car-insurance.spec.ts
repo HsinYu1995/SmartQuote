@@ -1,9 +1,8 @@
 import { test, expect } from '@playwright/test'
-import { login, fillClientForm } from './helpers'
+import { fillClientForm } from './helpers'
 
 test.describe('Car Insurance Quote', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page)
     await page.goto('/quotes/new?type=car')
   })
 

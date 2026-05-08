@@ -13,8 +13,27 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    // Runs first: logs in once and saves the auth cookie
+    {
+      name: 'setup',
+      testMatch: '**/global.setup.ts',
+    },
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/.auth/demo-broker.json',
+      },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'firefox',
+      use: {
+        ...devices['Desktop Firefox'],
+        storageState: 'tests/.auth/demo-broker.json',
+      },
+      dependencies: ['setup'],
+    },
     {
       name: 'api',
       testMatch: '**/rate-limit.spec.ts',

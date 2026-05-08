@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { login, fillClientForm } from './helpers'
+import { fillClientForm } from './helpers'
 
 async function fillHealthForm(page: import('@playwright/test').Page) {
   await page.getByTestId('plan-type').selectOption('PPO')
@@ -13,7 +13,6 @@ async function fillHealthForm(page: import('@playwright/test').Page) {
 
 test.describe('Health Insurance Quote', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page)
     await page.goto('/quotes/new?type=health')
   })
 

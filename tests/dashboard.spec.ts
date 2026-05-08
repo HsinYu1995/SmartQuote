@@ -1,9 +1,7 @@
 import { test, expect } from '@playwright/test'
-import { login } from './helpers'
-
 test.describe('Dashboard', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page)
+    await page.goto('/')
   })
 
   test('renders stats grid', async ({ page }) => {

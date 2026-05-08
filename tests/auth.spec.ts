@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test'
 
+// Auth tests explicitly test the login UI — run with a clean unauthenticated context
+test.use({ storageState: { cookies: [], origins: [] } })
+
 test.describe('Authentication', () => {
   test('shows login page for unauthenticated users', async ({ page }) => {
     await page.goto('/')

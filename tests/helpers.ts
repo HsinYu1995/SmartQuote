@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-export async function login(page: Page, email = 'broker@demo.com', password = 'password123') {
+export async function login(page: Page, email = 'alex.johnson@smartquote.com', password = 'demo1234') {
   await page.goto('/login')
   await page.getByTestId('email-input').fill(email)
   await page.getByTestId('password-input').fill(password)

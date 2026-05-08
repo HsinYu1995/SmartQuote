@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { login, fillClientForm } from './helpers'
+import { fillClientForm } from './helpers'
 
 async function fillHouseForm(page: import('@playwright/test').Page) {
   await page.getByTestId('property-address').fill('456 Oak Avenue')
@@ -18,7 +18,6 @@ async function fillHouseForm(page: import('@playwright/test').Page) {
 
 test.describe('House Insurance Quote', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page)
     await page.goto('/quotes/new?type=house')
   })
 
