@@ -2,7 +2,7 @@ import { test as setup } from '@playwright/test'
 import path from 'path'
 import fs from 'fs'
 
-const authFile = path.join(__dirname, '.auth/demo-broker.json')
+const authFile = path.resolve('tests/.auth/demo-broker.json')
 
 setup('authenticate as demo broker', async ({ page }) => {
   fs.mkdirSync(path.dirname(authFile), { recursive: true })
