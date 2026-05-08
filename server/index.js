@@ -60,9 +60,9 @@ const rateLimitConfig = {
 app.use('/api/auth/login', rateLimit(rateLimitConfig))
 app.use('/api/auth/register', rateLimit(rateLimitConfig))
 
-// All /api routes are protected except /api/auth/*
+// All /api routes are protected except /api/auth/* and /api/health
 app.use('/api', (req, res, next) => {
-  if (req.path.startsWith('/auth/')) return next()
+  if (req.path.startsWith('/auth/') || req.path === '/health') return next()
   requireAuth(req, res, next)
 })
 
